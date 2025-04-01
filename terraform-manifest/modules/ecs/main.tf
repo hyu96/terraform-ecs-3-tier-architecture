@@ -1,13 +1,41 @@
-resource "aws_ecs_cluster" "main" {
-  name = "${var.environment}-boolean-ecs-cluster"
-  
-  tags = {
-    Name = "${var.environment}-ecs-cluster"
+resource "aws_ecr_repository" "boolean" {
+  name                 = "boolean"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
   }
 }
 
-resource "aws_ecs_task_definition" "main" {
-  family                   = "${var.environment}-task"
+resource "aws_ecr_lifecycle_policy" "boolean" {
+  repository = aws_ecr_repository.boolean.name
+
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "Keep last 30 images"
+      action = {
+        type = "expire"
+      }
+      selection = {
+        tagStatus   = "any"
+        countType   = "imageCountMoreThan"
+        countNumber = 12
+      }
+    }]
+  })
+}
+
+resource "aws_ecs_cluster" "boolean" {
+  name = "boolean-ecs-cluster-${var.environment}"
+  
+  tags = {
+    Name = "ecs-cluster-${var.environment}"
+  }
+}
+
+resource "aws_ecs_task_definition" "api-gateway-task" {
+  family                   = "api-gateway-task-${var.environment}"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
@@ -29,14 +57,14 @@ resource "aws_ecs_task_definition" "main" {
   ])
   
   tags = {
-    Name = "${var.environment}-task-definition"
+    Name = "api-gateway-task-definition-${var.environment}"
   }
 }
 
-resource "aws_ecs_service" "main" {
-  name            = "${var.environment}-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.main.arn
+resource "aws_ecs_service" "api-gateway" {
+  name            = "api-gateway-${var.environment}"
+  cluster         = aws_ecs_cluster.boolean.id
+  task_definition = aws_ecs_task_definition.api-gateway-task.arn
   desired_count   = 1
   launch_type     = "FARGATE"
   
@@ -88,6 +116,6 @@ resource "aws_security_group" "ecs_service" {
   }
 
   tags = {
-    Name = "${var.environment}-ecs-service-sg"
+    Name = "ecs-service-sg-${var.environment}"
   }
 }

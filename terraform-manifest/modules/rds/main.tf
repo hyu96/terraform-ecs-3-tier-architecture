@@ -27,7 +27,7 @@ resource "aws_db_instance" "main" {
   instance_class         = var.instance_class
   db_name                = replace("boolean_${var.environment}", "/[^a-zA-Z0-9]/", "")
   username               = var.db_username
-  password               = jsondecode(data.aws_secretsmanager_secret_version.db_password.secret_string)
+  password               = data.aws_secretsmanager_secret_version.db_password.secret_string
   parameter_group_name   = "default.${data.aws_rds_engine_version.postgres.parameter_group_family}"
   publicly_accessible    = false
   skip_final_snapshot    = true

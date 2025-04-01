@@ -6,5 +6,6 @@ variable "environment" {
 variable "db_password" {
   description = "Database password to store in Secrets Manager"
   type        = string
+  default     = ""
   sensitive   = true
 }

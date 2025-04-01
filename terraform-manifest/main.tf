@@ -5,6 +5,12 @@ terraform {
       version = "~> 5.0"
     }
   }
+
+  backend "s3" {
+    bucket         = "boolean-terraform-state"
+    key            = "terraform/state/terraform.tfstate"
+    region         = "ap-southeast-1"
+  }
 }
 
 provider "aws" {
@@ -65,4 +71,5 @@ module "rds" {
   db_password_secret_arn = module.secrets_manager.db_password_secret_arn
   allowed_cidr_blocks = var.allowed_cidr_blocks
   ecs_security_group_id = module.ecs.service_security_group_id
+  depends_on = [ module.secrets_manager ]
 }
