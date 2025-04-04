@@ -7,9 +7,9 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "boolean-terraform-state"
-    key            = "terraform/state/terraform.tfstate"
-    region         = "ap-southeast-1"
+    bucket = "boolean-terraform-state"
+    key    = "terraform/state/terraform.tfstate"
+    region = "ap-southeast-1"
   }
 }
 
@@ -42,7 +42,7 @@ data "aws_availability_zones" "available" {
 
 module "ecs" {
   source = "./modules/ecs"
-  
+
   environment       = var.environment
   vpc_id            = module.vpc.vpc_id
   public_subnet_ids = module.vpc.public_subnets
@@ -50,26 +50,25 @@ module "ecs" {
 
 module "s3" {
   source = "./modules/s3"
-  
+
   environment = var.environment
 }
 
-module "secrets_manager" {
-  source = "./modules/secrets_manager"
-  
+module "ssm_parameter" {
+  source = "./modules/ssm_parameter"
+
   environment = var.environment
-  db_password = var.db_password
 }
 
 module "rds" {
   source = "./modules/rds"
-  
-  environment       = var.environment
-  vpc_id            = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnets
-  db_username       = var.db_username
-  db_password_secret_arn = module.secrets_manager.db_password_secret_arn
-  allowed_cidr_blocks = var.allowed_cidr_blocks
+
+  environment           = var.environment
+  vpc_id                = module.vpc.vpc_id
+  private_subnet_ids    = module.vpc.private_subnets
+  db_username           = "${var.db_username}_${var.environment}"
+  db_password           = module.ssm_parameter.db_password_value
+  allowed_cidr_blocks   = var.allowed_cidr_blocks
   ecs_security_group_id = module.ecs.service_security_group_id
-  depends_on = [ module.secrets_manager ]
+  depends_on            = [module.ssm_parameter]
 }

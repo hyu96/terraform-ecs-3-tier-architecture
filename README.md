@@ -13,6 +13,19 @@ This Terraform project provisions a complete AWS infrastructure including:
 - Terraform v1.0+ installed
 - AWS CLI configured with credentials
 
+## Development Tools
+
+This project uses several tools to ensure code quality, security, and maintainability:
+
+- **terraform fmt**: Built-in Terraform command to apply recommended coding conventions
+- **tfswitch**: Handy tool for managing and switching between Terraform versions on your workstation
+- **tflint**: Plugin used to enforce best practices (such as naming conventions)
+- **tfsec**: Static analysis of your terraform templates to spot potential security issues (such as hardcoded passwords)
+- **terratest**: Automated testing library to validate infrastructure works correctly by making HTTP requests, API calls, SSH connections, etc.
+- **terraform_docs**: Package used to generate documentation for Terraform modules
+- **checkov**: Static code analysis for IaC tools with best practice checks for AWS and Azure, plus support for custom rules
+- **pre-commit**: Collection of git hooks that force/remind developers to perform actions (e.g. fmt, lint, docs) before pushing Terraform code
+
 ## Usage
 
 1. Clone this repository

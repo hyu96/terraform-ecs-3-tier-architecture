@@ -28,7 +28,7 @@ resource "aws_ecr_lifecycle_policy" "boolean" {
 
 resource "aws_ecs_cluster" "boolean" {
   name = "boolean-ecs-cluster-${var.environment}"
-  
+
   tags = {
     Name = "ecs-cluster-${var.environment}"
   }
@@ -41,7 +41,7 @@ resource "aws_ecs_task_definition" "api-gateway-task" {
   cpu                      = 256
   memory                   = 512
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  
+
   container_definitions = jsonencode([
     {
       name      = "${var.environment}-container"
@@ -55,7 +55,7 @@ resource "aws_ecs_task_definition" "api-gateway-task" {
       ]
     }
   ])
-  
+
   tags = {
     Name = "api-gateway-task-definition-${var.environment}"
   }
@@ -67,7 +67,7 @@ resource "aws_ecs_service" "api-gateway" {
   task_definition = aws_ecs_task_definition.api-gateway-task.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-  
+
   network_configuration {
     subnets          = var.public_subnet_ids
     assign_public_ip = true
@@ -76,7 +76,7 @@ resource "aws_ecs_service" "api-gateway" {
 
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "${var.environment}-ecs-task-execution-role"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

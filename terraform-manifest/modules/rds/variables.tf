@@ -18,8 +18,8 @@ variable "db_username" {
   type        = string
 }
 
-variable "db_password_secret_arn" {
-  description = "ARN of the Secrets Manager secret containing the database password"
+variable "db_password" {
+  description = "Name of the SSM Parameter containing the database password"
   type        = string
 }
 
