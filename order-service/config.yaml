@@ -1,0 +1,4 @@
+server:
+  port: "8081"
+user_service:
+  host: "http://localhost:8080"
