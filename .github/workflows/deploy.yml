@@ -1,0 +1,142 @@
+name: Monorepo Build and Deploy Pipeline
+
+on:
+  push:
+    branches: [ test-ci-cd ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REPOSITORY: boolean
+  ECS_CLUSTER: boolean-ecs-cluster-prd
+  ENV: prd
+
+jobs:
+  manual-approval:
+      name: Manual Approval
+      runs-on: ubuntu-latest
+      if: success() # Only proceed if terraform-plan job succeeds
+      
+      permissions:
+        issues: write
+
+      steps:
+        - name: Await Manual Approval
+          uses: trstringer/manual-approval@v1
+          with:
+            secret: ${{ github.TOKEN }}
+            approvers: hyu96
+            minimum-approvals: 1
+            issue-title: "Manual Approval Required for Terraform Apply"
+            issue-body: "Please approve or deny the deployment."
+
+  detect-changes:
+    name: Detect Changed Services
+    runs-on: ubuntu-latest
+    outputs:
+      api-gateway: ${{ steps.filter.outputs.api-gateway }}
+      orders: ${{ steps.filter.outputs.orders }}
+      orders-execution: ${{ steps.filter.outputs.orders-execution }}
+      users: ${{ steps.filter.outputs.users }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            api-gateway:
+              - 'apps/boolean-api-gateway/**'
+              - 'libs/contracts/src/protos/**'
+              - 'libs/contracts/src/database/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '!.github/workflows/deploy.yml'
+            orders:
+              - 'apps/orders/**'
+              - 'libs/contracts/src/protos/orders/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '!.github/workflows/deploy.yml'
+            orders-execution:
+              - 'apps/orders-execution/**'
+              - 'libs/contracts/src/protos/orders-execution/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '!.github/workflows/deploy.yml'
+            users:
+              - 'apps/users/**'
+              - 'libs/contracts/src/protos/users/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '!.github/workflows/deploy.yml'
+
+  build:
+    name: Build and Push Images
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: ['api-gateway']
+        include:
+          - app: api-gateway
+            changed: ${{ fromJson(needs.detect-changes.outputs.api-gateway || 'false') }}
+
+    steps:
+      - name: Check if service changed
+        if: matrix.changed != 'true'
+        run: echo "Skipping ${{ matrix.app }} - no changes detected" && exit 0
+      - name: Checkout
+        uses: actions/checkout@v3
+
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and Push Docker image
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ matrix.app }}-1.${{ github.run_number }}.0 \
+                      -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ matrix.app }}-latest \
+                      --build-arg APP=${{ matrix.app }} .
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ matrix.app }}-1.${{ github.run_number }}.0
+
+  deploy:
+    name: Deploy to ECS
+    needs: manual-approval
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    strategy:
+      matrix:
+        app: ['api-gateway']
+        include:
+          - app: api-gateway
+            changed: ${{ fromJson(needs.detect-changes.outputs.api-gateway || 'false') }}
+    
+    steps:
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ matrix.app }}-${{ env.ENV }} \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
