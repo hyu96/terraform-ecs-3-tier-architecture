@@ -12,24 +12,6 @@ env:
   ENV: prd
 
 jobs:
-  manual-approval:
-      name: Manual Approval
-      runs-on: ubuntu-latest
-      if: success() # Only proceed if terraform-plan job succeeds
-      
-      permissions:
-        issues: write
-
-      steps:
-        - name: Await Manual Approval
-          uses: trstringer/manual-approval@v1
-          with:
-            secret: ${{ github.TOKEN }}
-            approvers: hyu96
-            minimum-approvals: 1
-            issue-title: "Manual Approval Required for Terraform Apply"
-            issue-body: "Please approve or deny the deployment."
-
   detect-changes:
     name: Detect Changed Services
     runs-on: ubuntu-latest

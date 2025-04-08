@@ -1,0 +1,71 @@
+name: Order Service Build and Deploy Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REPOSITORY: boolean
+  ECS_CLUSTER: boolean-ecs-cluster-prd
+  ENV: prd
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+  build:
+    name: Build and Push Image
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and Push Docker image
+        run: |
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:order-service-1.${{ github.run_number }}.0 \
+                      -t ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:order-service-latest \
+                      -f Dockerfile .
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:order-service-1.${{ github.run_number }}.0
+
+  deploy:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    
+    steps:
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service order-service-${{ env.ENV }} \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}

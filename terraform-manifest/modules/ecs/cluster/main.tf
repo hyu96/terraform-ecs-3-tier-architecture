@@ -33,17 +33,3 @@ resource "aws_ecs_cluster" "boolean" {
     Name = "ecs-cluster-${var.environment}"
   }
 }
-
-module "order-service" {
-    source = "./order-service"
-
-    depends_on = [ aws_ecs_cluster.boolean ]
-    service_name = "order-service"
-    environment = var.environment
-    desired_count = 1
-    cpu = 256
-    memory = 512
-    vpc_id = var.vpc_id
-    public_subnet_ids = var.public_subnet_ids
-    cluster_id = aws_ecs_cluster.boolean.id
-}
