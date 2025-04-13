@@ -22,9 +22,3 @@ variable "db_username" {
   description = "Database username"
   type        = string
 }
-
-variable "allowed_cidr_blocks" {
-  description = "List of CIDR blocks allowed to access the database"
-  type        = list(string)
-  default     = []
-}

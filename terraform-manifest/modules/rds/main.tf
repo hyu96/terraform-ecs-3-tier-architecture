@@ -14,7 +14,7 @@ data "aws_rds_engine_version" "postgres" {
 }
 
 resource "aws_db_instance" "main" {
-  identifier        = "boolean-rds-instance-${var.environment}"
+  identifier        = "tf-learning-${var.environment}"
   allocated_storage = var.allocated_storage
   storage_type      = var.storage_type
 
@@ -25,7 +25,7 @@ resource "aws_db_instance" "main" {
   username               = var.db_username
   password               = var.db_password
   parameter_group_name   = "default.${data.aws_rds_engine_version.postgres.parameter_group_family}"
-  publicly_accessible    = false
+  publicly_accessible    = true
   skip_final_snapshot    = true
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.rds.id]
@@ -41,10 +41,10 @@ resource "aws_security_group" "rds" {
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [var.ecs_security_group_id]
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {

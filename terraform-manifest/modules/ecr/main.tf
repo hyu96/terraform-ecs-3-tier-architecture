@@ -1,5 +1,6 @@
 module "ecr" {
-  source = "terraform-aws-modules/ecr/aws"
+  source  = "terraform-aws-modules/ecr/aws"
+  version = "2.3.1"
 
   repository_name = "tf-learning-demo"
   repository_type = "public"
@@ -24,6 +25,6 @@ module "ecr" {
 
   tags = {
     Terraform   = "true"
-    Environment = "${var.environment}"
+    Environment = var.environment
   }
 }

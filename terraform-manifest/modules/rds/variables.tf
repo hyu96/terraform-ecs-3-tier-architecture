@@ -23,12 +23,6 @@ variable "db_password" {
   type        = string
 }
 
-variable "allowed_cidr_blocks" {
-  description = "List of CIDR blocks allowed to access the database"
-  type        = list(string)
-  default     = []
-}
-
 variable "allocated_storage" {
   description = "The allocated storage in gigabytes"
   type        = number
@@ -45,9 +39,4 @@ variable "instance_class" {
   description = "The instance class of the RDS instance"
   type        = string
   default     = "db.t3.micro"
-}
-
-variable "ecs_security_group_id" {
-  description = "Security group ID of the ECS service"
-  type        = string
 }

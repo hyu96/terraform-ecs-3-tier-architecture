@@ -1,22 +1,3 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-
-  backend "s3" {
-    bucket = "boolean-terraform-state"
-    key    = "terraform/state/terraform.tfstate"
-    region = "ap-southeast-1"
-  }
-}
-
-provider "aws" {
-  region = var.aws_region
-}
-
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
@@ -63,12 +44,10 @@ module "ssm_parameter" {
 module "rds" {
   source = "./modules/rds"
 
-  environment           = var.environment
-  vpc_id                = module.vpc.vpc_id
-  private_subnet_ids    = module.vpc.private_subnets
-  db_username           = "${var.db_username}_${var.environment}"
-  db_password           = module.ssm_parameter.db_password_value
-  allowed_cidr_blocks   = var.allowed_cidr_blocks
-  ecs_security_group_id = module.ecs.service_security_group_id
-  depends_on            = [module.ssm_parameter]
+  environment         = var.environment
+  vpc_id              = module.vpc.vpc_id
+  private_subnet_ids  = module.vpc.private_subnets
+  db_username         = "${var.db_username}_${var.environment}"
+  db_password         = module.ssm_parameter.db_password_value
+  depends_on          = [module.ssm_parameter]
 }
