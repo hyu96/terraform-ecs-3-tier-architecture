@@ -24,7 +24,17 @@ module "order_service" {
         }
       ]
 
-      enable_cloudwatch_logging = false
+      health_check = {
+        command      = ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
+        interval     = 30        # seconds between checks
+        timeout      = 5         # time to wait before failing the check
+        retries      = 3         # how many times to retry before marking unhealthy
+        start_period = 10        # wait time before starting checks (gives nginx time to start)
+      }
+      
+      enable_cloudwatch_logging = true
+
+      readonly_root_filesystem = false
     }
   }
 
@@ -40,6 +50,7 @@ module "order_service" {
     }
   }
 
+  assign_public_ip = true
   subnet_ids = var.public_subnet_ids
   security_group_rules = {
     alb_ingress_3000 = {
